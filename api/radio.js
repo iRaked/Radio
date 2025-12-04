@@ -1,18 +1,21 @@
-// /api/radio.js
-export const config = { runtime: "edge" };
+// Usamos runtime Node en Vercel (no Edge)
+export const config = {
+  runtime: "nodejs"
+};
 
-export default async function handler(req) {
+export default function handler(req, res) {
+  const http = require("http");
   const streamUrl = "http://178.32.146.184:2852/stream.mp3";
 
-  const resp = await fetch(streamUrl);
-  if (!resp.ok) {
-    return new Response("Error al conectar con el stream", { status: resp.status });
-  }
+  // Cabecera correcta para audio
+  res.setHeader("Content-Type", "audio/mpeg");
 
-  return new Response(resp.body, {
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-store"
-    }
+  // Conectamos al stream original y lo reenviamos
+  http.get(streamUrl, (streamRes) => {
+    streamRes.pipe(res);
+  }).on("error", (err) => {
+    console.error("Proxy error:", err);
+    res.statusCode = 500;
+    res.end("Proxy error");
   });
 }
